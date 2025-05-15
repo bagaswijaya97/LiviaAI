@@ -19,7 +19,7 @@ public class GeminiController : ControllerBase
     // Konstanta API Key dan URL endpoint Gemini, hanya di-set sekali.
     private static readonly string _apiKey = Constan.CONST_GOOGLE_API_KEY;
     private static readonly string _endpoint =
-        Constan.CONST_URL_GOOGLE_API_GEMINI_FLASH_15_TEXT + _apiKey;
+        Constan.CONST_URL_GOOGLE_API_GEMINI_FLASH_20_TEXT + _apiKey;
 
     // Opsi konfigurasi JSON serializer (mengabaikan null, camelCase).
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -114,7 +114,7 @@ public class GeminiController : ControllerBase
 
         // Ambil informasi token dari usageMetadata
         var usage = json?["usageMetadata"];
-        int personaToken = 168; // Token untuk persona
+        int personaToken = 201; // Token untuk persona
         int promptTokenCount = usage?["promptTokenCount"]?.GetValue<int>() ?? 0;
         int inputToken = Math.Max(0, promptTokenCount - personaToken);
         int outputToken = usage?["candidatesTokenCount"]?.GetValue<int>() ?? 0;
@@ -247,7 +247,7 @@ public class GeminiController : ControllerBase
         var html = finalJson?["html"]?.ToString()?.Replace("\n", "")?.Replace("\r", "");
 
         var usage = json?["usageMetadata"];
-        int personaToken = 168; // [🔧] Atur sesuai panjang persona kamu
+        int personaToken = 201; // [🔧] Atur sesuai panjang persona kamu
 
         // Estimasi jumlah token dari prompt full (text)
         int textToken = TokenEstimator.EstimateTokens(fullPrompt);
