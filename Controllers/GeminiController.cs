@@ -5,7 +5,9 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using GeminiAIServices.Helpers;
+using LiviaAI.Helpers;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
@@ -17,7 +19,7 @@ public class GeminiController : ControllerBase
     // Konstanta API Key dan URL endpoint Gemini, hanya di-set sekali.
     private static readonly string _apiKey = Constan.CONST_GOOGLE_API_KEY;
     private static readonly string _endpoint =
-        Constan.CONST_URL_GOOGLE_API_GEMINI_FLASH_20_TEXT + _apiKey;
+        Constan.CONST_URL_GOOGLE_API_GEMINI_FLASH_15_TEXT + _apiKey;
 
     // Opsi konfigurasi JSON serializer (mengabaikan null, camelCase).
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -31,19 +33,22 @@ public class GeminiController : ControllerBase
     private readonly JWTOptions _jwtOptions;
     private readonly HttpClient _client;
     private readonly IMemoryCache _cache;
+    private readonly GoogleSheetsLogger _sheetLogger;
 
     // Constructor untuk inject dependency
     public GeminiController(
         JWTHelper jwtHelper,
         IOptions<JWTOptions> jwtOptions,
         IHttpClientFactory httpClientFactory,
-        IMemoryCache memoryCache
+        IMemoryCache memoryCache,
+        GoogleSheetsLogger sheetLogger
     )
     {
         _jwtHelper = jwtHelper;
         _jwtOptions = jwtOptions.Value;
         _client = httpClientFactory.CreateClient("GeminiClient");
         _cache = memoryCache;
+        _sheetLogger = sheetLogger;
     }
 
     /// <summary>
@@ -57,10 +62,8 @@ public class GeminiController : ControllerBase
         if (request == null || string.IsNullOrWhiteSpace(request.prompt))
             return BadRequest(new { data = (object?)null });
 
-        // Ambil userId dari JWT
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userId))
-            return Unauthorized(new { data = (object?)null });
+        // Initialisasi type
+        var type = "LiviaTextOnly";
 
         // Gabungkan prompt dengan instruksi personalisasi, lalu generate key untuk cache
         var promptText = Constan.STR_PERSONAL_1_MODEL_GEMINI + request.prompt;
@@ -111,18 +114,42 @@ public class GeminiController : ControllerBase
 
         // Ambil informasi token dari usageMetadata
         var usage = json?["usageMetadata"];
-        int inputToken = usage?["promptTokenCount"]?.GetValue<int>() ?? 0;
+        int personaToken = 168; // Token untuk persona
+        int promptTokenCount = usage?["promptTokenCount"]?.GetValue<int>() ?? 0;
+        int inputToken = Math.Max(0, promptTokenCount - personaToken);
         int outputToken = usage?["candidatesTokenCount"]?.GetValue<int>() ?? 0;
         int totalToken = usage?["totalTokenCount"]?.GetValue<int>() ?? 0;
 
         // Simpan ke cache untuk 5 menit
         _cache.Set(cacheKey, html, TimeSpan.FromMinutes(5));
 
+        // Logging async tanpa menunggu
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _sheetLogger.LogAsync(
+                    type,
+                    request.prompt,
+                    html ?? "[null]",
+                    personaToken,
+                    inputToken,
+                    0,
+                    outputToken,
+                    totalToken
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[LOGGING ERROR] {ex.Message}");
+            }
+        });
+
         return Ok(
             new
             {
                 html,
-                input_token = inputToken,
+                input_token = personaToken + inputToken,
                 output_token = outputToken,
                 total_token = totalToken,
             }
@@ -140,16 +167,13 @@ public class GeminiController : ControllerBase
         CancellationToken cancellationToken
     )
     {
-        // Validasi input
         if (file == null || file.Length == 0 || string.IsNullOrWhiteSpace(prompt))
             return BadRequest(new { error = "File atau prompt tidak valid." });
 
-        // Ambil userId dari JWT
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userId))
+        var type = "LiviaTextAndImage";
+        if (string.IsNullOrEmpty(type))
             return Unauthorized(new { error = "User tidak valid." });
 
-        // Baca isi file ke memory dan compress jika melebihi 4MB
         await using var memoryStream = new MemoryStream();
         await file.CopyToAsync(memoryStream, cancellationToken).ConfigureAwait(false);
         var imageBytes = memoryStream.ToArray();
@@ -170,12 +194,10 @@ public class GeminiController : ControllerBase
             }
         }
 
-        // Encode file jadi base64 dan siapkan prompt + mime type
         var base64Image = Convert.ToBase64String(imageBytes);
         var mimeType = GeneralHelper.GetMimeType(file.FileName);
-        var promptText = Constan.STR_PERSONAL_1_MODEL_GEMINI + prompt;
+        var fullPrompt = Constan.STR_PERSONAL_1_MODEL_GEMINI + prompt;
 
-        // Buat payload JSON untuk API Gemini dengan gambar dan teks
         var body = JsonSerializer.Serialize(
             new
             {
@@ -187,7 +209,7 @@ public class GeminiController : ControllerBase
                         parts = new object[]
                         {
                             new { inlineData = new { mimeType, data = base64Image } },
-                            new { text = promptText },
+                            new { text = fullPrompt },
                         },
                     },
                 },
@@ -203,8 +225,6 @@ public class GeminiController : ControllerBase
             _jsonOptions
         );
 
-        // Kirim request ke Gemini
-        // string _endpoint = Constan.CONST_URL_GOOGLE_API_GEMINI_FLASH_15_TEXT_IMAGE + _apiKey;
         using var content = new StringContent(body, Encoding.UTF8, "application/json");
         using var response = await _client
             .PostAsync(_endpoint, content, cancellationToken)
@@ -216,7 +236,6 @@ public class GeminiController : ControllerBase
             return StatusCode((int)response.StatusCode, new { error = err });
         }
 
-        // Parse hasil response
         var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
         var json = await JsonSerializer.DeserializeAsync<JsonNode>(stream).ConfigureAwait(false);
         var rawJson = json?["candidates"]?[0]?["content"]?["parts"]?[0]?["text"]?.ToString();
@@ -227,6 +246,50 @@ public class GeminiController : ControllerBase
         var finalJson = JsonNode.Parse(rawJson);
         var html = finalJson?["html"]?.ToString()?.Replace("\n", "")?.Replace("\r", "");
 
-        return Ok(new { html });
+        var usage = json?["usageMetadata"];
+        int personaToken = 168; // [🔧] Atur sesuai panjang persona kamu
+
+        // Estimasi jumlah token dari prompt full (text)
+        int textToken = TokenEstimator.EstimateTokens(fullPrompt);
+        int promptTokenCount = usage?["promptTokenCount"]?.GetValue<int>() ?? 0;
+        int imageToken = Math.Max(0, promptTokenCount - textToken);
+
+        int inputTokenText = Math.Max(0, textToken - personaToken);
+        int inputTokenImage = imageToken;
+        int outputToken = usage?["candidatesTokenCount"]?.GetValue<int>() ?? 0;
+        int totalToken = usage?["totalTokenCount"]?.GetValue<int>() ?? 0;
+
+        // Logging async
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _sheetLogger.LogAsync(
+                    type,
+                    prompt,
+                    html ?? "[null]",
+                    personaToken,
+                    inputTokenText,
+                    inputTokenImage,
+                    outputToken,
+                    totalToken
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[LOGGING ERROR] {ex.Message}");
+            }
+        });
+
+        // ✅ Kembalikan data ke client
+        return Ok(
+            new
+            {
+                html,
+                input_token = personaToken + inputTokenText + inputTokenImage,
+                output_token = outputToken,
+                total_token = totalToken,
+            }
+        );
     }
 }

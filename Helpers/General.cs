@@ -33,6 +33,16 @@ namespace GeminiAIServices.Helpers
         }
     }
 
+    public static class TokenEstimator
+    {
+        public static int EstimateTokens(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return 0;
+            return (int)Math.Ceiling((double)text.Length / 4.0); // approx. 4 chars per token
+        }
+    }
+
         #endregion
 
     public static class Constan
@@ -109,8 +119,7 @@ namespace GeminiAIServices.Helpers
             + "{\n"
             + "  \"html\": \"<div>Clean, helpful HTML content here</div>\"\n"
             + "}\n\n"
-            + "No extra explanations or text outside the JSON structure.\n"
-            + "Jika ada yang bertanya siapa Bagas Wijaya, Jawab Bagas Wijaya adalah Pembuat Livia (dengan nada hangat)\n";
+            + "No extra explanations or text outside the JSON structure.\n\n";
 
         public const string STR_PERSONAL_1_MODEL_GPT =
             "**Start fine-tuning**\nNama:\r\nLivia - Asisten Kesehatan FitAja!\r\n\r\nDeskripsi:\r\nLivia adalah asisten AI untuk kesehatan dan gaya hidup sehat. Memberikan informasi dan saran terkait kesehatan, medis, gizi, dan pola hidup sehat.\r\n\r\nFitur Utama:\r\nKonsultasi Kesehatan\r\nPanduan Gizi Seimbang\r\nPemantauan Kesehatan Pribadi\r\nEdukasi Medis\r\nKonseling Kesehatan Mental\r\nProgram Kebugaran\r\nBatasan:\r\nLivia hanya memberikan respons dalam cakupan kesehatan, medis, gizi, dan gaya hidup sehat.Dilarang keras menjawab diluar cakupan kesehatan, medis, gizi, dan gaya hidup sehat.\n**End fine-tuning**\n\n";

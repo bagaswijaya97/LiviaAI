@@ -1,9 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "VH++ygZwlfk=",
+  "dgSpecHash": "Ilp4sjpuw5w=",
   "success": true,
   "projectFilePath": "/Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/LiviaAI.csproj",
   "expectedPackageFiles": [
+    "/Users/fitaja/.nuget/packages/google.apis/1.69.0/google.apis.1.69.0.nupkg.sha512",
+    "/Users/fitaja/.nuget/packages/google.apis.auth/1.69.0/google.apis.auth.1.69.0.nupkg.sha512",
+    "/Users/fitaja/.nuget/packages/google.apis.core/1.69.0/google.apis.core.1.69.0.nupkg.sha512",
+    "/Users/fitaja/.nuget/packages/google.apis.sheets.v4/1.69.0.3757/google.apis.sheets.v4.1.69.0.3757.nupkg.sha512",
     "/Users/fitaja/.nuget/packages/microsoft.aspnetcore.authentication.jwtbearer/9.0.5/microsoft.aspnetcore.authentication.jwtbearer.9.0.5.nupkg.sha512",
     "/Users/fitaja/.nuget/packages/microsoft.aspnetcore.openapi/9.0.4/microsoft.aspnetcore.openapi.9.0.4.nupkg.sha512",
     "/Users/fitaja/.nuget/packages/microsoft.extensions.apidescription.server/6.0.5/microsoft.extensions.apidescription.server.6.0.5.nupkg.sha512",
@@ -26,6 +30,7 @@
     "/Users/fitaja/.nuget/packages/microsoft.identitymodel.protocols.openidconnect/8.0.1/microsoft.identitymodel.protocols.openidconnect.8.0.1.nupkg.sha512",
     "/Users/fitaja/.nuget/packages/microsoft.identitymodel.tokens/8.9.0/microsoft.identitymodel.tokens.8.9.0.nupkg.sha512",
     "/Users/fitaja/.nuget/packages/microsoft.openapi/1.6.23/microsoft.openapi.1.6.23.nupkg.sha512",
+    "/Users/fitaja/.nuget/packages/newtonsoft.json/13.0.3/newtonsoft.json.13.0.3.nupkg.sha512",
     "/Users/fitaja/.nuget/packages/serilog/4.2.0/serilog.4.2.0.nupkg.sha512",
     "/Users/fitaja/.nuget/packages/serilog.aspnetcore/9.0.0/serilog.aspnetcore.9.0.0.nupkg.sha512",
     "/Users/fitaja/.nuget/packages/serilog.extensions.hosting/9.0.0/serilog.extensions.hosting.9.0.0.nupkg.sha512",
@@ -40,7 +45,9 @@
     "/Users/fitaja/.nuget/packages/swashbuckle.aspnetcore.swagger/8.1.1/swashbuckle.aspnetcore.swagger.8.1.1.nupkg.sha512",
     "/Users/fitaja/.nuget/packages/swashbuckle.aspnetcore.swaggergen/8.1.1/swashbuckle.aspnetcore.swaggergen.8.1.1.nupkg.sha512",
     "/Users/fitaja/.nuget/packages/swashbuckle.aspnetcore.swaggerui/8.1.1/swashbuckle.aspnetcore.swaggerui.8.1.1.nupkg.sha512",
-    "/Users/fitaja/.nuget/packages/system.identitymodel.tokens.jwt/8.9.0/system.identitymodel.tokens.jwt.8.9.0.nupkg.sha512"
+    "/Users/fitaja/.nuget/packages/system.codedom/7.0.0/system.codedom.7.0.0.nupkg.sha512",
+    "/Users/fitaja/.nuget/packages/system.identitymodel.tokens.jwt/8.9.0/system.identitymodel.tokens.jwt.8.9.0.nupkg.sha512",
+    "/Users/fitaja/.nuget/packages/system.management/7.0.2/system.management.7.0.2.nupkg.sha512"
   ],
   "logs": []
 }
