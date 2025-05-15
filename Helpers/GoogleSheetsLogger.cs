@@ -40,8 +40,8 @@ namespace LiviaAI.Helpers
         )
         {
             string sheetName = DateTime.UtcNow.ToString("MMMM yyyy", CultureInfo.InvariantCulture);
-            string range = $"{sheetName}!A:I"; // [🔧] 9 kolom = A sampai I
-            string headerRange = $"{sheetName}!A1:I1";
+            string range = $"{sheetName}!A:J"; // [🔧] 9 kolom = A sampai I
+            string headerRange = $"{sheetName}!A1:J1";
 
             var spreadsheet = await _service.Spreadsheets.Get(_spreadsheetId).ExecuteAsync();
             var sheetExists = spreadsheet.Sheets.Any(s =>
@@ -77,7 +77,8 @@ namespace LiviaAI.Helpers
                     {
                         new List<object>
                         {
-                            "Timestamp",
+                            "Date",
+                            "Time",
                             "Type",
                             "Prompt",
                             "HTML Response",
@@ -207,7 +208,7 @@ namespace LiviaAI.Helpers
                                         StartRowIndex = 0,
                                         EndRowIndex = 1,
                                         StartColumnIndex = 0,
-                                        EndColumnIndex = 9,
+                                        EndColumnIndex = 10,
                                     },
                                 },
                             },
@@ -222,9 +223,9 @@ namespace LiviaAI.Helpers
                                     SheetId = sheetId,
                                     Dimension = "COLUMNS",
                                     StartIndex = 0,
-                                    EndIndex = 9,
+                                    EndIndex = 10,
                                 },
-                                Properties = new DimensionProperties { PixelSize = 150 },
+                                Properties = new DimensionProperties { PixelSize = 140 },
                                 Fields = "pixelSize",
                             },
                         },
@@ -243,7 +244,8 @@ namespace LiviaAI.Helpers
                 {
                     new List<object>
                     {
-                        DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                        DateTime.Now.ToString("yyyy-MM-dd"),
+                        DateTime.Now.ToString("HH:mm:ss"),
                         type,
                         prompt,
                         html,
