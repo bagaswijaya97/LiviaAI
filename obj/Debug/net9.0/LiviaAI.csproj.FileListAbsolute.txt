@@ -1,11 +1,16 @@
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/appsettings.Development.json
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/appsettings.json
+/Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/monitoringliviaai-486c0c7bbf4c.json
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/LiviaAI.staticwebassets.endpoints.json
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/LiviaAI
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/LiviaAI.deps.json
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/LiviaAI.runtimeconfig.json
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/LiviaAI.dll
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/LiviaAI.pdb
+/Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/Google.Apis.dll
+/Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/Google.Apis.Auth.dll
+/Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/Google.Apis.Core.dll
+/Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/Google.Apis.Sheets.v4.dll
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/Microsoft.AspNetCore.OpenApi.dll
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/Microsoft.Extensions.DependencyModel.dll
@@ -16,6 +21,7 @@
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/Microsoft.IdentityModel.Tokens.dll
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/Microsoft.OpenApi.dll
+/Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/Newtonsoft.Json.dll
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/Serilog.dll
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/Serilog.AspNetCore.dll
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/Serilog.Extensions.Hosting.dll
@@ -29,7 +35,10 @@
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/Swashbuckle.AspNetCore.Swagger.dll
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/Swashbuckle.AspNetCore.SwaggerGen.dll
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/Swashbuckle.AspNetCore.SwaggerUI.dll
+/Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/System.CodeDom.dll
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/System.IdentityModel.Tokens.Jwt.dll
+/Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/System.Management.dll
+/Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/bin/Debug/net9.0/runtimes/win/lib/net7.0/System.Management.dll
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/obj/Debug/net9.0/LiviaAI.csproj.AssemblyReference.cache
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/obj/Debug/net9.0/LiviaAI.GeneratedMSBuildEditorConfig.editorconfig
 /Users/Bagas Wijaya/API/Latihan/2025/May/LiviaAI/obj/Debug/net9.0/LiviaAI.AssemblyInfoInputs.cache

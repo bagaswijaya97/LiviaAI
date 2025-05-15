@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using LiviaAI.Helpers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -14,7 +15,8 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("System", Serilog.Events.LogEventLevel.Warning)
     .Enrich.WithProperty("Application", "LiviaAI") // ini penting!
     .WriteTo.Console()
-    .WriteTo.Seq("http://localhost:5341", apiKey: "obff1nkQoA47FLTaWoC9")
+    // .WriteTo.Seq("http://localhost:5341", apiKey: "obff1nkQoA47FLTaWoC9")
+    .WriteTo.Seq("http://localhost:5341") // untuk local
     .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
@@ -109,6 +111,14 @@ builder.Services.AddHttpClient(
 
 // ✅ Setup Cahce untuk Gemini API
 builder.Services.AddMemoryCache();
+
+// ✅ Google Sheets Logger
+builder.Services.AddSingleton(provider =>
+{
+    var credentialPath = "monitoringliviaai-486c0c7bbf4c.json"; // letakkan file JSON ini di root project
+    var spreadsheetId = "13VhYocw5otSEtHV5fpvcfHNYoRnqvEd14zqcDishhY0";
+    return new GoogleSheetsLogger(credentialPath, spreadsheetId);
+});
 
 var app = builder.Build();
 
