@@ -15,8 +15,8 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("System", Serilog.Events.LogEventLevel.Warning)
     .Enrich.WithProperty("Application", "LiviaAI") // ini penting!
     .WriteTo.Console()
-    // .WriteTo.Seq("http://localhost:5341", apiKey: "obff1nkQoA47FLTaWoC9")
-    .WriteTo.Seq("http://localhost:5341") // untuk local
+    .WriteTo.Seq("http://localhost:5341", apiKey: "obff1nkQoA47FLTaWoC9")
+    // .WriteTo.Seq("http://localhost:5341") // untuk local
     .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);

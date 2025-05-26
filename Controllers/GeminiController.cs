@@ -149,7 +149,8 @@ public class GeminiController : ControllerBase
                     inputToken,
                     0,
                     outputToken,
-                    totalToken
+                    totalToken,
+                    0
                 );
             }
             catch (Exception ex)
@@ -200,20 +201,19 @@ public class GeminiController : ControllerBase
         await file.CopyToAsync(memoryStream, cancellationToken).ConfigureAwait(false);
         var imageBytes = memoryStream.ToArray();
 
+        double fileSizeInMB = Math.Round((double)imageBytes.Length / (1024.0 * 1024.0), 2);
+
+        Console.WriteLine($"File size: {fileSizeInMB} MB");
         if (imageBytes.Length > 4 * 1024 * 1024)
         {
-            imageBytes = GeneralHelper.CompressData(imageBytes);
-            if (imageBytes.Length > 4 * 1024 * 1024)
-            {
-                return BadRequest(
-                    new
-                    {
-                        success = false,
-                        code = Constan.STR_RES_CD_ERROR,
-                        message = Constan.STR_RES_MESSAGE_ERROR_FILE_SIZE,
-                    }
-                );
-            }
+            return BadRequest(
+                new
+                {
+                    success = false,
+                    code = Constan.STR_RES_CD_ERROR,
+                    message = Constan.STR_RES_MESSAGE_ERROR_FILE_SIZE,
+                }
+            );
         }
 
         var base64Image = Convert.ToBase64String(imageBytes);
@@ -294,7 +294,8 @@ public class GeminiController : ControllerBase
                     inputTokenText,
                     inputTokenImage,
                     outputToken,
-                    totalToken
+                    totalToken,
+                    fileSizeInMB
                 );
             }
             catch (Exception ex)
