@@ -65,6 +65,10 @@ namespace GeminiAIServices.Helpers
         /*
         Sample Full URL : https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=YOUR_API_KEY
         */
+        public const string STR_MODEL_ID_1 = "gemini-2.0-flash-lite";
+        public const string STR_MODEL_NAME_1 = "Livia";
+        public const string STR_MODEL_ID_2 = "gemini-2.5-flash-preview-05-20";
+        public const string STR_MODEL_NAME_2 = "Livia V2";
 
         public const string STR_URL_GEMINI_API_1 =
             "https://generativelanguage.googleapis.com/v1beta/models/";

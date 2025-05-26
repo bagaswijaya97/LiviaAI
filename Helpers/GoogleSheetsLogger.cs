@@ -36,12 +36,13 @@ namespace LiviaAI.Helpers
             int inputTokenText,
             int inputTokenImage,
             int outputToken,
-            int totalToken
+            int totalToken,
+            double fileSize
         )
         {
-            string sheetName = DateTime.UtcNow.ToString("MMMM yyyy", CultureInfo.InvariantCulture);
-            string range = $"{sheetName}!A:J"; // [🔧] 9 kolom = A sampai I
-            string headerRange = $"{sheetName}!A1:J1";
+            string sheetName = "Phase 2";
+            string range = $"{sheetName}!A:K"; // Updated range to include 'File Size'
+            string headerRange = $"{sheetName}!A1:K1";
 
             var spreadsheet = await _service.Spreadsheets.Get(_spreadsheetId).ExecuteAsync();
             var sheetExists = spreadsheet.Sheets.Any(s =>
@@ -50,7 +51,7 @@ namespace LiviaAI.Helpers
 
             if (!sheetExists)
             {
-                // Tambah sheet baru
+                // Add new sheet
                 await _service
                     .Spreadsheets.BatchUpdate(
                         new BatchUpdateSpreadsheetRequest
@@ -70,7 +71,7 @@ namespace LiviaAI.Helpers
                     )
                     .ExecuteAsync();
 
-                // Header kolom
+                // Column headers
                 var headers = new ValueRange
                 {
                     Values = new List<IList<object>>
@@ -87,6 +88,7 @@ namespace LiviaAI.Helpers
                             "Input Image Token",
                             "Output Token",
                             "Total Tokens",
+                            "File Size (MB)", // New column
                         },
                     },
                 };
@@ -112,7 +114,7 @@ namespace LiviaAI.Helpers
                 {
                     Requests = new List<Request>
                     {
-                        // Format header: bold, center, warna teks hitam
+                        // Format header: bold, center, black text color
                         new Request
                         {
                             RepeatCell = new RepeatCellRequest
@@ -152,7 +154,7 @@ namespace LiviaAI.Helpers
                                 {
                                     SheetId = sheetId,
                                     StartColumnIndex = 0,
-                                    EndColumnIndex = 9,
+                                    EndColumnIndex = 10,
                                 },
                                 Cell = new CellData
                                 {
@@ -174,7 +176,7 @@ namespace LiviaAI.Helpers
                                 Fields = "gridProperties.frozenRowCount",
                             },
                         },
-                        // Border tabel
+                        // Border table
                         new Request
                         {
                             UpdateBorders = new UpdateBordersRequest
@@ -185,9 +187,9 @@ namespace LiviaAI.Helpers
                                     StartRowIndex = 0,
                                     EndRowIndex = 1,
                                     StartColumnIndex = 0,
-                                    EndColumnIndex = 9,
+                                    EndColumnIndex = 10,
                                 },
-                                // Top = MakeSolidBorder(),
+                                Top = MakeSolidBorder(),
                                 // Bottom = MakeSolidBorder(),
                                 // Left = MakeSolidBorder(),
                                 // Right = MakeSolidBorder(),
@@ -195,7 +197,7 @@ namespace LiviaAI.Helpers
                                 // InnerVertical = MakeSolidBorder(),
                             },
                         },
-                        // Filter seperti Table1
+                        // Filter like Table1
                         new Request
                         {
                             SetBasicFilter = new SetBasicFilterRequest
@@ -208,12 +210,12 @@ namespace LiviaAI.Helpers
                                         StartRowIndex = 0,
                                         EndRowIndex = 1,
                                         StartColumnIndex = 0,
-                                        EndColumnIndex = 10,
+                                        EndColumnIndex = 11,
                                     },
                                 },
                             },
                         },
-                        // Set semua kolom jadi 150px
+                        // Set all columns to 150px
                         new Request
                         {
                             UpdateDimensionProperties = new UpdateDimensionPropertiesRequest
@@ -223,7 +225,7 @@ namespace LiviaAI.Helpers
                                     SheetId = sheetId,
                                     Dimension = "COLUMNS",
                                     StartIndex = 0,
-                                    EndIndex = 10,
+                                    EndIndex = 11,
                                 },
                                 Properties = new DimensionProperties { PixelSize = 140 },
                                 Fields = "pixelSize",
@@ -237,7 +239,7 @@ namespace LiviaAI.Helpers
                     .ExecuteAsync();
             }
 
-            // Tambahkan data log ke baris berikutnya
+            // Add log data to the next row
             var values = new ValueRange
             {
                 Values = new List<IList<object>>
@@ -254,6 +256,7 @@ namespace LiviaAI.Helpers
                         inputTokenImage,
                         outputToken,
                         totalToken,
+                        fileSize, // New data
                     },
                 },
             };

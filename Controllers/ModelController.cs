@@ -1,3 +1,4 @@
+using GeminiAIServices.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,8 +19,8 @@ namespace LiviaAI.Controllers
             // Create a list of models
             var models = new[]
             {
-                new { model_id = "gemini-2.0-flash-lite", model_name = "Livia" },
-                new { model_id = "gemini-2.5-flash-preview-05-20", model_name = "Livia V2" },
+                new { model_id = Constan.STR_MODEL_ID_1, model_name = Constan.STR_MODEL_NAME_1 },
+                new { model_id = Constan.STR_MODEL_ID_1, model_name = Constan.STR_MODEL_NAME_2 },
             };
 
             // Return the models as a JSON response
