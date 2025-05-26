@@ -2,6 +2,7 @@ public class GeminiRequest
 {
     public string prompt { get; set; } = string.Empty;
     public string? session_id { get; set; }
+    public string? model { get; set; }
 }
 
 #region TextOnly Request

@@ -17,9 +17,10 @@ using Microsoft.Extensions.Options;
 public class GeminiController : ControllerBase
 {
     // Konstanta API Key dan URL endpoint Gemini, hanya di-set sekali.
-    private static readonly string _apiKey = Constan.CONST_GOOGLE_API_KEY;
-    private static readonly string _endpoint =
-        Constan.CONST_URL_GOOGLE_API_GEMINI_FLASH_20_TEXT + _apiKey;
+    private static readonly string _endpoint1 = Constan.STR_URL_GEMINI_API_1;
+    private static readonly string _model = Constan.STR_MODEL_GEMINI;
+    private static readonly string _endpoint2 = Constan.STR_URL_GEMINI_API_2;
+    private static readonly string _apiKey = Constan.STR_GOOGLE_API_KEY;
 
     // Opsi konfigurasi JSON serializer (mengabaikan null, camelCase).
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -59,11 +60,23 @@ public class GeminiController : ControllerBase
     public async Task<IActionResult> GenerateText([FromBody] GeminiRequest request)
     {
         // Validasi request kosong atau prompt kosong
-        if (request == null || string.IsNullOrWhiteSpace(request.prompt))
+        if (
+            request == null
+            || string.IsNullOrWhiteSpace(request.prompt)
+            || string.IsNullOrWhiteSpace(request.model)
+        )
             return BadRequest(new { data = (object?)null });
 
         // Initialisasi type
         var type = "LiviaTextOnly";
+
+        // Initialisasi model
+        var model = request.model;
+        if (string.IsNullOrEmpty(model))
+            model = _model;
+
+        // Persiapkan URL endpoint
+        var _endpoint = _endpoint1 + model + _endpoint2 + _apiKey;
 
         // Gabungkan prompt dengan instruksi personalisasi, lalu generate key untuk cache
         var promptText = Constan.STR_PERSONAL_1_MODEL_GEMINI + request.prompt;
@@ -163,16 +176,25 @@ public class GeminiController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GenerateTextAndImage(
         [FromForm] string prompt,
+        [FromForm] string model,
         [FromForm] IFormFile file,
         CancellationToken cancellationToken
     )
     {
-        if (file == null || file.Length == 0 || string.IsNullOrWhiteSpace(prompt))
-            return BadRequest(new { error = "File atau prompt tidak valid." });
+        if (
+            file == null
+            || file.Length == 0
+            || string.IsNullOrWhiteSpace(prompt)
+            || string.IsNullOrWhiteSpace(model)
+        )
+            return BadRequest(new { error = "Parameter cannot null value." });
 
         var type = "LiviaTextAndImage";
         if (string.IsNullOrEmpty(type))
             return Unauthorized(new { error = "User tidak valid." });
+
+        // Persiapkan URL endpoint
+        var _endpoint = _endpoint1 + model + _endpoint2 + _apiKey;
 
         await using var memoryStream = new MemoryStream();
         await file.CopyToAsync(memoryStream, cancellationToken).ConfigureAwait(false);
@@ -187,8 +209,8 @@ public class GeminiController : ControllerBase
                     new
                     {
                         success = false,
-                        code = Constan.CONST_RES_CD_ERROR,
-                        message = Constan.CONST_RES_MESSAGE_ERROR_FILE_SIZE,
+                        code = Constan.STR_RES_CD_ERROR,
+                        message = Constan.STR_RES_MESSAGE_ERROR_FILE_SIZE,
                     }
                 );
             }

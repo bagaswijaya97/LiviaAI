@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LiviaAI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f5b344319841531247121210af28339658739463")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7bcb28ea8ab75fe4dcfd883149f2300dc56ee68f")]
 [assembly: System.Reflection.AssemblyProductAttribute("LiviaAI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LiviaAI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
