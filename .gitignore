@@ -482,3 +482,13 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+bin/Debug/net9.0/LiviaAI.dll
+bin/Debug/net9.0/LiviaAI.pdb
+obj/Debug/net9.0/LiviaAI.AssemblyInfo.cs
+obj/Debug/net9.0/LiviaAI.AssemblyInfoInputs.cache
+obj/Debug/net9.0/LiviaAI.csproj.FileListAbsolute.txt
+obj/Debug/net9.0/LiviaAI.dll
+obj/Debug/net9.0/LiviaAI.pdb
+obj/Debug/net9.0/LiviaAI.sourcelink.json
+obj/Debug/net9.0/ref/LiviaAI.dll
+obj/Debug/net9.0/refint/LiviaAI.dll
