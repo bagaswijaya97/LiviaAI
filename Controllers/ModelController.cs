@@ -20,7 +20,7 @@ namespace LiviaAI.Controllers
             var models = new[]
             {
                 new { model_id = Constan.STR_MODEL_ID_1, model_name = Constan.STR_MODEL_NAME_1 },
-                new { model_id = Constan.STR_MODEL_ID_1, model_name = Constan.STR_MODEL_NAME_2 },
+                new { model_id = Constan.STR_MODEL_ID_2, model_name = Constan.STR_MODEL_NAME_2 },
             };
 
             // Return the models as a JSON response

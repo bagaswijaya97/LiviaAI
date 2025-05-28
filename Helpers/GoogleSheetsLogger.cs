@@ -37,21 +37,24 @@ namespace LiviaAI.Helpers
             int inputTokenImage,
             int outputToken,
             int totalToken,
-            double fileSize
+            double fileSize,
+            string model
         )
         {
             string sheetName = "Phase 2";
-            string range = $"{sheetName}!A:K"; // Updated range to include 'File Size'
+            string range = $"{sheetName}!A:K";
             string headerRange = $"{sheetName}!A1:K1";
 
             var spreadsheet = await _service.Spreadsheets.Get(_spreadsheetId).ExecuteAsync();
-            var sheetExists = spreadsheet.Sheets.Any(s =>
+            var sheet = spreadsheet.Sheets.FirstOrDefault(s =>
                 s.Properties.Title.Equals(sheetName, StringComparison.OrdinalIgnoreCase)
             );
 
-            if (!sheetExists)
+            int sheetId;
+
+            if (sheet == null)
             {
-                // Add new sheet
+                // Create new sheet
                 await _service
                     .Spreadsheets.BatchUpdate(
                         new BatchUpdateSpreadsheetRequest
@@ -71,7 +74,7 @@ namespace LiviaAI.Helpers
                     )
                     .ExecuteAsync();
 
-                // Column headers
+                // Update headers
                 var headers = new ValueRange
                 {
                     Values = new List<IList<object>>
@@ -88,7 +91,8 @@ namespace LiviaAI.Helpers
                             "Input Image Token",
                             "Output Token",
                             "Total Tokens",
-                            "File Size (MB)", // New column
+                            "File Size (MB)",
+                            "Model",
                         },
                     },
                 };
@@ -105,16 +109,18 @@ namespace LiviaAI.Helpers
                     .RAW;
                 await updateRequest.ExecuteAsync();
 
-                var sheetId =
-                    (await _service.Spreadsheets.Get(_spreadsheetId).ExecuteAsync())
-                        .Sheets.First(s => s.Properties.Title == sheetName)
-                        .Properties.SheetId ?? 0;
+                // Get sheet ID after creation
+                sheet = (
+                    await _service.Spreadsheets.Get(_spreadsheetId).ExecuteAsync()
+                ).Sheets.First(s => s.Properties.Title == sheetName);
 
+                sheetId = sheet.Properties.SheetId ?? 0;
+
+                // Format sheet
                 var formatRequest = new BatchUpdateSpreadsheetRequest
                 {
                     Requests = new List<Request>
                     {
-                        // Format header: bold, center, black text color
                         new Request
                         {
                             RepeatCell = new RepeatCellRequest
@@ -145,7 +151,6 @@ namespace LiviaAI.Helpers
                                 Fields = "userEnteredFormat(textFormat,horizontalAlignment)",
                             },
                         },
-                        // Wrap strategy = CLIP
                         new Request
                         {
                             RepeatCell = new RepeatCellRequest
@@ -163,7 +168,6 @@ namespace LiviaAI.Helpers
                                 Fields = "userEnteredFormat.wrapStrategy",
                             },
                         },
-                        // Freeze header row
                         new Request
                         {
                             UpdateSheetProperties = new UpdateSheetPropertiesRequest
@@ -176,7 +180,6 @@ namespace LiviaAI.Helpers
                                 Fields = "gridProperties.frozenRowCount",
                             },
                         },
-                        // Border table
                         new Request
                         {
                             UpdateBorders = new UpdateBordersRequest
@@ -190,14 +193,8 @@ namespace LiviaAI.Helpers
                                     EndColumnIndex = 10,
                                 },
                                 Top = MakeSolidBorder(),
-                                // Bottom = MakeSolidBorder(),
-                                // Left = MakeSolidBorder(),
-                                // Right = MakeSolidBorder(),
-                                // InnerHorizontal = MakeSolidBorder(),
-                                // InnerVertical = MakeSolidBorder(),
                             },
                         },
-                        // Filter like Table1
                         new Request
                         {
                             SetBasicFilter = new SetBasicFilterRequest
@@ -210,12 +207,29 @@ namespace LiviaAI.Helpers
                                         StartRowIndex = 0,
                                         EndRowIndex = 1,
                                         StartColumnIndex = 0,
-                                        EndColumnIndex = 11,
+                                        EndColumnIndex = 12,
                                     },
                                 },
                             },
                         },
-                        // Set all columns to 150px
+                        new Request
+                        {
+                            SortRange = new SortRangeRequest
+                            {
+                                Range = new GridRange
+                                {
+                                    SheetId = sheetId,
+                                    StartRowIndex = 1,
+                                    StartColumnIndex = 0,
+                                    EndColumnIndex = 12,
+                                },
+                                SortSpecs = new List<SortSpec>
+                                {
+                                    new SortSpec { DimensionIndex = 0, SortOrder = "DESCENDING" }, // Date
+                                    new SortSpec { DimensionIndex = 1, SortOrder = "DESCENDING" }, // Time
+                                },
+                            },
+                        },
                         new Request
                         {
                             UpdateDimensionProperties = new UpdateDimensionPropertiesRequest
@@ -225,7 +239,7 @@ namespace LiviaAI.Helpers
                                     SheetId = sheetId,
                                     Dimension = "COLUMNS",
                                     StartIndex = 0,
-                                    EndIndex = 11,
+                                    EndIndex = 10,
                                 },
                                 Properties = new DimensionProperties { PixelSize = 140 },
                                 Fields = "pixelSize",
@@ -238,8 +252,12 @@ namespace LiviaAI.Helpers
                     .Spreadsheets.BatchUpdate(formatRequest, _spreadsheetId)
                     .ExecuteAsync();
             }
+            else
+            {
+                sheetId = sheet.Properties.SheetId ?? 0;
+            }
 
-            // Add log data to the next row
+            // Append data
             var values = new ValueRange
             {
                 Values = new List<IList<object>>
@@ -256,7 +274,8 @@ namespace LiviaAI.Helpers
                         inputTokenImage,
                         outputToken,
                         totalToken,
-                        fileSize, // New data
+                        fileSize,
+                        model,
                     },
                 },
             };
@@ -268,6 +287,34 @@ namespace LiviaAI.Helpers
                 .ValueInputOptionEnum
                 .RAW;
             await appendRequest.ExecuteAsync();
+
+            // Force sorting after appending
+            var sortRequest = new BatchUpdateSpreadsheetRequest
+            {
+                Requests = new List<Request>
+                {
+                    new Request
+                    {
+                        SortRange = new SortRangeRequest
+                        {
+                            Range = new GridRange
+                            {
+                                SheetId = sheetId,
+                                StartRowIndex = 1,
+                                StartColumnIndex = 0,
+                                EndColumnIndex = 12,
+                            },
+                            SortSpecs = new List<SortSpec>
+                            {
+                                new SortSpec { DimensionIndex = 0, SortOrder = "DESCENDING" }, // Date
+                                new SortSpec { DimensionIndex = 1, SortOrder = "DESCENDING" }, // Time
+                            },
+                        },
+                    },
+                },
+            };
+
+            await _service.Spreadsheets.BatchUpdate(sortRequest, _spreadsheetId).ExecuteAsync();
         }
 
         private static Border MakeSolidBorder()

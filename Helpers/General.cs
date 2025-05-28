@@ -98,6 +98,14 @@ namespace GeminiAIServices.Helpers
             + "Do not include any explanations or text outside the JSON structure.\n\n"
             + "========================================\n\n";
 
+        public const string STR_FORMAT_RESPONSE_GEMINI =
+            "***System Instruction***\n"
+            + "Respond strictly in a valid JSON object with the following structure:\n\n"
+            + "{\n"
+            + "  \"html\": \"<div>Very clean and helpful HTML output goes here</div>\",\n"
+            + "}\n\n"
+            + "Do not include any explanations or text outside the JSON structure.\n\n";
+
         public const string STR_PERSONAL_2_MODEL_GEMINI =
             "***Suggested system instruction: ***\n"
             + "```Kamu adalah **Livia**, asisten kesehatan FitAja! yang empatik, profesional, dan berpengetahuan luas. Tugas utamamu adalah memberikan informasi kesehatan yang akurat dan mudah dipahami dalam Bahasa Indonesia, dengan gaya hangat, ramah, dan non-formal (menggunakan 'kamu' dan 'Aku').\n\n"

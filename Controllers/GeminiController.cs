@@ -78,9 +78,33 @@ public class GeminiController : ControllerBase
         // Persiapkan URL endpoint
         var _endpoint = _endpoint1 + model + _endpoint2 + _apiKey;
 
-        // Gabungkan prompt dengan instruksi personalisasi, lalu generate key untuk cache
-        var promptText = Constan.STR_PERSONAL_1_MODEL_GEMINI + request.prompt;
-        var cacheKey = $"gemini:{promptText.GetHashCode()}";
+        // Chat history logic
+        var chatId = request.session_id ?? "default";
+        var chatHistoryKey = $"chat-history:{chatId}";
+        var separator = "\n==============================\n";
+        var isFirstMessage = false;
+        LiviaAI.Models.Gemini.ChatHistory chatHistory;
+        if (!_cache.TryGetValue(chatHistoryKey, out chatHistory) || chatHistory == null)
+        {
+            chatHistory = new LiviaAI.Models.Gemini.ChatHistory { ChatId = chatId };
+            isFirstMessage = true;
+        }
+        // Add new message to history
+        chatHistory.Messages.Add(request.prompt);
+        // Keep only last 6 messages
+        if (chatHistory.Messages.Count > 6)
+            chatHistory.Messages = chatHistory
+                .Messages.Skip(chatHistory.Messages.Count - 6)
+                .ToList();
+        // Save updated history back to cache
+        _cache.Set(chatHistoryKey, chatHistory, TimeSpan.FromHours(1));
+        // Build formatted prompt with separator
+        var formattedPrompt = string.Join(separator, chatHistory.Messages);
+        var fullPromptText = isFirstMessage
+            ? Constan.STR_PERSONAL_1_MODEL_GEMINI + formattedPrompt
+            : Constan.STR_FORMAT_RESPONSE_GEMINI + formattedPrompt;
+        // Cache key must be unique per session and prompt
+        var cacheKey = $"gemini:{chatId}:{request.prompt.GetHashCode()}";
 
         // Cek apakah hasilnya sudah ada di cache
         if (_cache.TryGetValue(cacheKey, out string? cachedHtml))
@@ -90,7 +114,7 @@ public class GeminiController : ControllerBase
         var body = JsonSerializer.Serialize(
             new
             {
-                contents = new[] { new { parts = new[] { new { text = promptText } } } },
+                contents = new[] { new { parts = new[] { new { text = fullPromptText } } } },
                 generationConfig = new
                 {
                     temperature = 0.95,
@@ -117,13 +141,27 @@ public class GeminiController : ControllerBase
         var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
         var json = await JsonSerializer.DeserializeAsync<JsonNode>(stream).ConfigureAwait(false);
         var rawJson = json?["candidates"]?[0]?["content"]?["parts"]?[0]?["text"]?.ToString();
+        Console.WriteLine($"[DEBUG] Gemini rawJson: {rawJson}");
+        // If rawJson is a JSON string, extract the html field, otherwise treat as HTML
+        string html;
+        try
+        {
+            var parsed = JsonNode.Parse(rawJson);
+            html = parsed?["html"]?.ToString()?.Replace("\n", "")?.Replace("\r", "");
+            if (string.IsNullOrWhiteSpace(html))
+                html = rawJson;
+        }
+        catch
+        {
+            html = rawJson;
+        }
 
         if (string.IsNullOrWhiteSpace(rawJson))
             return StatusCode(502, new { error = "Gemini returned empty response." });
 
         // Parse hasil HTML dari isi teks
         var finalJson = JsonNode.Parse(rawJson);
-        var html = finalJson?["html"]?.ToString()?.Replace("\n", "")?.Replace("\r", "");
+        html = finalJson?["html"]?.ToString()?.Replace("\n", "")?.Replace("\r", "");
 
         // Ambil informasi token dari usageMetadata
         var usage = json?["usageMetadata"];
@@ -150,22 +188,25 @@ public class GeminiController : ControllerBase
                     0,
                     outputToken,
                     totalToken,
-                    0
+                    0,
+                    model
                 );
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[LOGGING ERROR] {ex.Message}");
-            }
+            catch { }
         });
 
+        // Return response with html and token info
         return Ok(
             new
             {
-                html,
-                input_token = personaToken + inputToken,
-                output_token = outputToken,
-                total_token = totalToken,
+                meta_data = new { code = 200, message = "OK" },
+                data = new
+                {
+                    html = html,
+                    input_token = inputToken,
+                    output_token = outputToken,
+                    total_token = totalToken,
+                },
             }
         );
     }
@@ -295,7 +336,8 @@ public class GeminiController : ControllerBase
                     inputTokenImage,
                     outputToken,
                     totalToken,
-                    fileSizeInMB
+                    fileSizeInMB,
+                    model
                 );
             }
             catch (Exception ex)
