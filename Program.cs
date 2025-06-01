@@ -56,9 +56,26 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClient();
 
 // Ambil JWTOptions hanya sekali
-var jwtOptions =
-    builder.Configuration.GetSection("JWT").Get<JWTOptions>()
-    ?? throw new InvalidOperationException("JWT options not found.");
+var jwtOptions = builder.Configuration.GetSection("JWT").Get<JWTOptions>();
+
+// If ExpiresInMinutes is 0 but ExpiresInHours is present, convert
+if (
+    jwtOptions.ExpiresInMinutes == 0
+    && builder.Configuration.GetSection("JWT")["ExpiresInHours"] != null
+)
+{
+    if (int.TryParse(builder.Configuration.GetSection("JWT")["ExpiresInHours"], out int hours))
+    {
+        jwtOptions.ExpiresInMinutes = hours * 60;
+    }
+}
+builder.Services.Configure<JWTOptions>(opts =>
+{
+    opts.Key = jwtOptions.Key;
+    opts.Issuer = jwtOptions.Issuer;
+    opts.Audience = jwtOptions.Audience;
+    opts.ExpiresInMinutes = jwtOptions.ExpiresInMinutes;
+});
 string strJWTKey = jwtOptions.Key;
 
 // ✅ JWT Authentication
@@ -113,6 +130,7 @@ builder.Services.AddHttpClient(
 builder.Services.AddMemoryCache();
 
 // ✅ Google Sheets Logger
+builder.Services.AddSingleton<LiviaAI.Services.ChatHistoryService>();
 builder.Services.AddSingleton(provider =>
 {
     var credentialPath = "monitoringliviaai-486c0c7bbf4c.json"; // letakkan file JSON ini di root project

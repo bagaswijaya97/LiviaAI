@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using GeminiAIServices.Helpers;
 using LiviaAI.Helpers;
+using LiviaAI.Models.Gemini;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -35,6 +36,7 @@ public class GeminiController : ControllerBase
     private readonly HttpClient _client;
     private readonly IMemoryCache _cache;
     private readonly GoogleSheetsLogger _sheetLogger;
+    private readonly LiviaAI.Services.ChatHistoryService _chatHistoryService;
 
     // Constructor untuk inject dependency
     public GeminiController(
@@ -42,7 +44,8 @@ public class GeminiController : ControllerBase
         IOptions<JWTOptions> jwtOptions,
         IHttpClientFactory httpClientFactory,
         IMemoryCache memoryCache,
-        GoogleSheetsLogger sheetLogger
+        GoogleSheetsLogger sheetLogger,
+        LiviaAI.Services.ChatHistoryService chatHistoryService
     )
     {
         _jwtHelper = jwtHelper;
@@ -50,6 +53,7 @@ public class GeminiController : ControllerBase
         _client = httpClientFactory.CreateClient("GeminiClient");
         _cache = memoryCache;
         _sheetLogger = sheetLogger;
+        _chatHistoryService = chatHistoryService;
     }
 
     /// <summary>
@@ -78,36 +82,47 @@ public class GeminiController : ControllerBase
         // Persiapkan URL endpoint
         var _endpoint = _endpoint1 + model + _endpoint2 + _apiKey;
 
-        // Chat history logic
-        var chatId = request.session_id ?? "default";
-        var chatHistoryKey = $"chat-history:{chatId}";
-        var separator = "\n==============================\n";
-        var isFirstMessage = false;
-        LiviaAI.Models.Gemini.ChatHistory chatHistory;
-        if (!_cache.TryGetValue(chatHistoryKey, out chatHistory) || chatHistory == null)
-        {
-            chatHistory = new LiviaAI.Models.Gemini.ChatHistory { ChatId = chatId };
-            isFirstMessage = true;
-        }
-        // Add new message to history
-        chatHistory.Messages.Add(request.prompt);
-        // Keep only last 6 messages
-        if (chatHistory.Messages.Count > 6)
-            chatHistory.Messages = chatHistory
-                .Messages.Skip(chatHistory.Messages.Count - 6)
-                .ToList();
-        // Save updated history back to cache
-        _cache.Set(chatHistoryKey, chatHistory, TimeSpan.FromHours(1));
-        // Build formatted prompt with separator
-        var formattedPrompt = string.Join(separator, chatHistory.Messages);
-        var fullPromptText = isFirstMessage
-            ? Constan.STR_PERSONAL_1_MODEL_GEMINI + formattedPrompt
-            : Constan.STR_FORMAT_RESPONSE_GEMINI + formattedPrompt;
-        // Cache key must be unique per session and prompt
-        var cacheKey = $"gemini:{chatId}:{request.prompt.GetHashCode()}";
+        // Chat history logic untuk text-only (refactored)
+        var chatId = request.session_id ?? "CHT-" + Guid.NewGuid().ToString("N").Substring(0, 10);
+        var chatHistory = _chatHistoryService.GetOrCreateHistory(chatId);
+        var isFirstMessage = chatHistory.Turns.Count == 0;
 
-        // Cek apakah hasilnya sudah ada di cache
-        if (_cache.TryGetValue(cacheKey, out string? cachedHtml))
+        string fullPromptText;
+        if (isFirstMessage)
+        {
+            fullPromptText =
+                Constan.STR_PERSONAL_1_MODEL_GEMINI + "User: " + request.prompt + "\nLivia:";
+        }
+        else
+        {
+            chatHistory.Turns.Add(new ChatTurn { UserMessage = request.prompt });
+            var persona = Constan.STR_PERSONAL_1_MODEL_GEMINI;
+            var dialogue = new StringBuilder();
+            foreach (var turn in chatHistory.Turns)
+            {
+                dialogue.AppendLine($"User: {turn.UserMessage}");
+                if (!string.IsNullOrWhiteSpace(turn.LiviaResponse))
+                {
+                    dialogue.AppendLine($" {turn.LiviaResponse}");
+                }
+                else
+                {
+                    dialogue.AppendLine("Livia:");
+                }
+            }
+            fullPromptText = persona + dialogue.ToString();
+        }
+        _chatHistoryService.SaveHistory(chatId, chatHistory);
+        Console.WriteLine(
+            $"[DEBUG] History Chat : gemini:history:{chatId} - "
+                + string.Join(
+                    " | ",
+                    chatHistory.Turns.Select(t =>
+                        $"User: {t.UserMessage} || Livia: {t.LiviaResponse}"
+                    )
+                )
+        );
+        if (_chatHistoryService.TryGetCachedHtml(chatId, out string cachedHtml))
             return Ok(new { html = cachedHtml });
 
         // Persiapkan payload request ke Gemini API
@@ -143,36 +158,97 @@ public class GeminiController : ControllerBase
         var rawJson = json?["candidates"]?[0]?["content"]?["parts"]?[0]?["text"]?.ToString();
         Console.WriteLine($"[DEBUG] Gemini rawJson: {rawJson}");
         // If rawJson is a JSON string, extract the html field, otherwise treat as HTML
-        string html;
+        string html = string.Empty;
         try
         {
-            var parsed = JsonNode.Parse(rawJson);
-            html = parsed?["html"]?.ToString()?.Replace("\n", "")?.Replace("\r", "");
-            if (string.IsNullOrWhiteSpace(html))
-                html = rawJson;
+            if (!string.IsNullOrEmpty(rawJson))
+            {
+                try
+                {
+                    var parsedNode = JsonNode.Parse(rawJson);
+                    var htmlNode = parsedNode?["html"];
+                    if (htmlNode != null)
+                    {
+                        html = htmlNode.ToString().Replace("\n", "").Replace("\r", "");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ERROR] Gagal parse rawJson sebagai JSON: {ex.Message}");
+                    html = rawJson;
+                }
+                if (string.IsNullOrWhiteSpace(html))
+                    html = rawJson ?? string.Empty;
+            }
+            else
+            {
+                html = string.Empty;
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            html = rawJson;
+            Console.WriteLine($"[ERROR] Exception parsing html: {ex.Message}");
+            html = rawJson ?? string.Empty;
         }
 
         if (string.IsNullOrWhiteSpace(rawJson))
             return StatusCode(502, new { error = "Gemini returned empty response." });
 
+        // Tambahkan flag "Livia:" ke response, hanya untuk chat pertama tambahkan sapaan
+        if (isFirstMessage)
+        {
+            html = "Livia: " + html;
+            // Set first Livia response in history
+            chatHistory.Turns.Add(
+                new ChatTurn { UserMessage = request.prompt, LiviaResponse = html ?? string.Empty }
+            );
+        }
+        else
+        {
+            // Remove greeting from subsequent responses if present
+            if (!string.IsNullOrEmpty(html) && html.Contains("Hai! Aku Livia"))
+            {
+                int idx = html.IndexOf("Hai! Aku Livia");
+                int endIdx = html.IndexOf(".", idx);
+                if (endIdx != -1)
+                {
+                    html = html.Remove(idx, endIdx - idx + 1).TrimStart();
+                }
+                else
+                {
+                    html = html.Remove(idx, "Hai! Aku Livia".Length).TrimStart();
+                }
+            }
+            html = (html ?? string.Empty).TrimStart();
+            if ((html ?? string.Empty).StartsWith("Livia:"))
+            {
+                html = (html ?? string.Empty).Substring("Livia:".Length).TrimStart();
+            }
+            html = "Livia: " + (html ?? string.Empty);
+            // Set Livia response for the last turn
+            if (chatHistory.Turns.Count > 0)
+            {
+                chatHistory.Turns[chatHistory.Turns.Count - 1].LiviaResponse = html;
+            }
+        }
         // Parse hasil HTML dari isi teks
         var finalJson = JsonNode.Parse(rawJson);
-        html = finalJson?["html"]?.ToString()?.Replace("\n", "")?.Replace("\r", "");
+        if (finalJson != null && finalJson["html"] != null)
+            html =
+                finalJson["html"]!.ToString()?.Replace("\n", "")?.Replace("\r", "") ?? string.Empty;
+
+        // Save updated history back to cache (after response)
 
         // Ambil informasi token dari usageMetadata
         var usage = json?["usageMetadata"];
-        int personaToken = 201; // Token untuk persona
+        int personaToken = 200; // Token untuk persona
         int promptTokenCount = usage?["promptTokenCount"]?.GetValue<int>() ?? 0;
         int inputToken = Math.Max(0, promptTokenCount - personaToken);
-        int outputToken = usage?["candidatesTokenCount"]?.GetValue<int>() ?? 0;
+        int outputToken =
+            usage?["candidatesTokenCount"]?.GetValue<int>()
+                + usage?["thoughtsTokenCount"]?.GetValue<int>()
+            ?? 0;
         int totalToken = usage?["totalTokenCount"]?.GetValue<int>() ?? 0;
-
-        // Simpan ke cache untuk 5 menit
-        _cache.Set(cacheKey, html, TimeSpan.FromMinutes(5));
 
         // Logging async tanpa menunggu
         _ = Task.Run(async () =>
@@ -219,6 +295,7 @@ public class GeminiController : ControllerBase
     public async Task<IActionResult> GenerateTextAndImage(
         [FromForm] string prompt,
         [FromForm] string model,
+        [FromForm] string session_id,
         [FromForm] IFormFile file,
         CancellationToken cancellationToken
     )
@@ -232,35 +309,64 @@ public class GeminiController : ControllerBase
             return BadRequest(new { error = "Parameter cannot null value." });
 
         var type = "LiviaTextAndImage";
-        if (string.IsNullOrEmpty(type))
-            return Unauthorized(new { error = "User tidak valid." });
-
-        // Persiapkan URL endpoint
         var _endpoint = _endpoint1 + model + _endpoint2 + _apiKey;
 
-        await using var memoryStream = new MemoryStream();
-        await file.CopyToAsync(memoryStream, cancellationToken).ConfigureAwait(false);
-        var imageBytes = memoryStream.ToArray();
+        // Calculate file size in MB for logging
+        double fileSizeInMB = file != null ? Math.Round((double)file.Length / (1024 * 1024), 2) : 0;
 
-        double fileSizeInMB = Math.Round((double)imageBytes.Length / (1024.0 * 1024.0), 2);
-
-        Console.WriteLine($"File size: {fileSizeInMB} MB");
-        if (imageBytes.Length > 4 * 1024 * 1024)
+        // Convert uploaded file to base64 string
+        string base64Image = string.Empty;
+        using (var ms = new MemoryStream())
         {
-            return BadRequest(
-                new
-                {
-                    success = false,
-                    code = Constan.STR_RES_CD_ERROR,
-                    message = Constan.STR_RES_MESSAGE_ERROR_FILE_SIZE,
-                }
-            );
+            await file!.CopyToAsync(ms, cancellationToken);
+            base64Image = Convert.ToBase64String(ms.ToArray());
         }
+        // Get mime type from uploaded file
+        string mimeType = file!.ContentType;
+        // Chat history logic untuk text-and-image (refactored)
+        var chatId =
+            HttpContext.Request.Form["session_id"].FirstOrDefault()
+            ?? "CHT-" + Guid.NewGuid().ToString("N").Substring(0, 10);
+        var chatHistory = _chatHistoryService.GetOrCreateHistory(chatId);
+        var isFirstMessage = chatHistory.Turns.Count == 0;
 
-        var base64Image = Convert.ToBase64String(imageBytes);
-        var mimeType = GeneralHelper.GetMimeType(file.FileName);
-        var fullPrompt = Constan.STR_PERSONAL_1_MODEL_GEMINI + prompt;
+        string fullPrompt;
+        if (isFirstMessage)
+        {
+            fullPrompt = Constan.STR_PERSONAL_1_MODEL_GEMINI + "User: " + prompt + "\nLivia:";
+        }
+        else
+        {
+            chatHistory.Turns.Add(new ChatTurn { UserMessage = prompt });
+            var persona = Constan.STR_PERSONAL_1_MODEL_GEMINI;
+            var dialogue = new StringBuilder();
+            foreach (var turn in chatHistory.Turns)
+            {
+                dialogue.AppendLine($"User: {turn.UserMessage}");
+                if (!string.IsNullOrWhiteSpace(turn.LiviaResponse))
+                {
+                    dialogue.AppendLine($" {turn.LiviaResponse}");
+                }
+                else
+                {
+                    dialogue.AppendLine("Livia:");
+                }
+            }
+            fullPrompt = persona + dialogue.ToString();
+        }
+        Console.WriteLine(
+            $"[DEBUG] History Chat : gemini:history:{chatId} - "
+                + string.Join(
+                    " | ",
+                    chatHistory.Turns.Select(t =>
+                        $"User: {t.UserMessage} || Livia: {t.LiviaResponse}"
+                    )
+                )
+        );
+        // if (_chatHistoryService.TryGetCachedHtml(chatId, out string cachedHtml))
+        //     return Ok(new { html = cachedHtml });
 
+        // Persiapkan payload request ke Gemini API
         var body = JsonSerializer.Serialize(
             new
             {
@@ -306,23 +412,46 @@ public class GeminiController : ControllerBase
         if (string.IsNullOrWhiteSpace(rawJson))
             return StatusCode(502, new { error = "Gemini returned empty response." });
 
-        var finalJson = JsonNode.Parse(rawJson);
-        var html = finalJson?["html"]?.ToString()?.Replace("\n", "")?.Replace("\r", "");
+        // === PARSE HTML FROM JSON RESPONSE ===
+        string html = string.Empty;
+        try
+        {
+            var finalJson = JsonNode.Parse(rawJson);
+            html =
+                finalJson?["html"]?.ToString()?.Replace("\n", "")?.Replace("\r", "")
+                ?? string.Empty;
+        }
+        catch
+        {
+            html = rawJson ?? string.Empty;
+        }
 
+        if (string.IsNullOrWhiteSpace(html))
+            html = "[no content returned]";
+
+        // === UPDATE CHAT HISTORY ===
+        if (chatHistory.Turns.Count > 0)
+        {
+            chatHistory.Turns[chatHistory.Turns.Count - 1].LiviaResponse = "Livia: " + html;
+        }
+        _chatHistoryService.SaveHistory(chatId, chatHistory);
+        _chatHistoryService.SaveCachedHtml(chatId, html);
+
+        // === TOKEN USAGE ===
         var usage = json?["usageMetadata"];
-        int personaToken = 201; // [🔧] Atur sesuai panjang persona kamu
-
-        // Estimasi jumlah token dari prompt full (text)
+        int personaToken = 201;
         int textToken = TokenEstimator.EstimateTokens(fullPrompt);
         int promptTokenCount = usage?["promptTokenCount"]?.GetValue<int>() ?? 0;
         int imageToken = Math.Max(0, promptTokenCount - textToken);
-
         int inputTokenText = Math.Max(0, textToken - personaToken);
         int inputTokenImage = imageToken;
-        int outputToken = usage?["candidatesTokenCount"]?.GetValue<int>() ?? 0;
+        int outputToken =
+            usage?["candidatesTokenCount"]?.GetValue<int>()
+                + usage?["thoughtsTokenCount"]?.GetValue<int>()
+            ?? 0;
         int totalToken = usage?["totalTokenCount"]?.GetValue<int>() ?? 0;
 
-        // Logging async
+        // === ASYNC LOGGING ===
         _ = Task.Run(async () =>
         {
             try
@@ -346,14 +475,18 @@ public class GeminiController : ControllerBase
             }
         });
 
-        // ✅ Kembalikan data ke client
+        // === RETURN TO CLIENT ===
         return Ok(
             new
             {
-                html,
-                input_token = personaToken + inputTokenText + inputTokenImage,
-                output_token = outputToken,
-                total_token = totalToken,
+                meta_data = new { code = 200, message = "OK" },
+                data = new
+                {
+                    html,
+                    input_token = personaToken + inputTokenText + inputTokenImage,
+                    output_token = outputToken,
+                    total_token = totalToken,
+                },
             }
         );
     }
