@@ -5,6 +5,7 @@
 
 # dotenv files
 .env
+genaitestandee-*.json
 
 # User-specific files
 *.rsuser
