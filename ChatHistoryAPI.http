@@ -1,0 +1,49 @@
+### Test Chat History APIs
+
+### 1. Get All Chat Histories
+GET {{baseUrl}}/api/gemini/chat-histories
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+###
+
+### 2. Get Chat History Detail by Session ID
+GET {{baseUrl}}/api/gemini/chat-history/CHT-1234567890
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+###
+
+### 3. Get Chat History Detail - Not Found Test
+GET {{baseUrl}}/api/gemini/chat-history/INVALID-SESSION-ID
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+###
+
+### 4. Get Chat History Detail - Empty Session ID Test
+GET {{baseUrl}}/api/gemini/chat-history/
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+###
+
+### Variables for testing
+# Set these variables in your environment:
+# baseUrl = http://localhost:5000 (or your API base URL)
+# jwtToken = your_valid_jwt_token_here
+
+### Example with localhost
+# @baseUrl = http://localhost:5000
+# @jwtToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+### Test with actual values (replace with your values)
+GET http://localhost:5000/api/gemini/chat-histories
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+Content-Type: application/json
+
+###
+
+GET http://localhost:5000/api/gemini/chat-history/CHT-1234567890
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+Content-Type: application/json

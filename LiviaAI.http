@@ -4,3 +4,32 @@ GET {{LiviaAI_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+### TEST: Food Recognition via Gemini Vision
+POST http://localhost:5000/gemini/text-and-image
+Authorization: Bearer {{your_token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="prompt"
+
+Apa nama makanan pada gambar ini?
+--boundary
+Content-Disposition: form-data; name="model"
+
+gemini-pro-vision
+--boundary
+Content-Disposition: form-data; name="session_id"
+
+test-session-001
+--boundary
+Content-Disposition: form-data; name="file"; filename="nasi_goreng.jpg"
+Content-Type: image/jpeg
+
+< ./test-images/nasi_goreng.jpg
+--boundary--
+
+### Expected:
+- Response code 200
+- Response body contains field "html" with the correct food name (e.g., "Nasi Goreng")
+- If image is not food, response should state so or return a relevant message

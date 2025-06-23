@@ -42,8 +42,8 @@ namespace LiviaAI.Helpers
         )
         {
             string sheetName = "Phase 2";
-            string range = $"{sheetName}!A:K";
-            string headerRange = $"{sheetName}!A1:K1";
+            string range = $"{sheetName}!A:L";
+            string headerRange = $"{sheetName}!A1:L1";
 
             var spreadsheet = await _service.Spreadsheets.Get(_spreadsheetId).ExecuteAsync();
             var sheet = spreadsheet.Sheets.FirstOrDefault(s =>
@@ -255,6 +255,46 @@ namespace LiviaAI.Helpers
             else
             {
                 sheetId = sheet.Properties.SheetId ?? 0;
+                
+                // Check if headers exist
+                var headerCheck = await _service.Spreadsheets.Values.Get(_spreadsheetId, headerRange).ExecuteAsync();
+                if (headerCheck.Values == null || headerCheck.Values.Count == 0 || headerCheck.Values[0].Count == 0)
+                {
+                    // Add headers if they don't exist
+                    var headers = new ValueRange
+                    {
+                        Values = new List<IList<object>>
+                        {
+                            new List<object>
+                            {
+                                "Date",
+                                "Time",
+                                "Type",
+                                "Prompt",
+                                "HTML Response",
+                                "Persona Token",
+                                "Input Text Token",
+                                "Input Image Token",
+                                "Output Token",
+                                "Total Tokens",
+                                "File Size (MB)",
+                                "Model",
+                            },
+                        },
+                    };
+
+                    var updateRequest = _service.Spreadsheets.Values.Update(
+                        headers,
+                        _spreadsheetId,
+                        headerRange
+                    );
+                    updateRequest.ValueInputOption = SpreadsheetsResource
+                        .ValuesResource
+                        .UpdateRequest
+                        .ValueInputOptionEnum
+                        .RAW;
+                    await updateRequest.ExecuteAsync();
+                }
             }
 
             // Append data

@@ -60,7 +60,7 @@ var jwtOptions = builder.Configuration.GetSection("JWT").Get<JWTOptions>();
 
 // If ExpiresInMinutes is 0 but ExpiresInHours is present, convert
 if (
-    jwtOptions.ExpiresInMinutes == 0
+    jwtOptions?.ExpiresInMinutes == 0
     && builder.Configuration.GetSection("JWT")["ExpiresInHours"] != null
 )
 {
@@ -71,12 +71,12 @@ if (
 }
 builder.Services.Configure<JWTOptions>(opts =>
 {
-    opts.Key = jwtOptions.Key;
+    opts.Key = jwtOptions?.Key ?? throw new InvalidOperationException("JWT Key cannot be null");
     opts.Issuer = jwtOptions.Issuer;
     opts.Audience = jwtOptions.Audience;
     opts.ExpiresInMinutes = jwtOptions.ExpiresInMinutes;
 });
-string strJWTKey = jwtOptions.Key;
+string strJWTKey = jwtOptions?.Key ?? throw new InvalidOperationException("JWT Key cannot be null");
 
 // ✅ JWT Authentication
 builder
@@ -131,9 +131,13 @@ builder.Services.AddMemoryCache();
 
 // ✅ Google Sheets Logger
 builder.Services.AddSingleton<LiviaAI.Services.ChatHistoryService>();
+builder.Services.AddSingleton<
+    LiviaAI.Services.IFileStorageService,
+    LiviaAI.Services.FileStorageService
+>();
 builder.Services.AddSingleton(provider =>
 {
-    var credentialPath = "monitoringliviaai-486c0c7bbf4c.json"; // letakkan file JSON ini di root project
+    var credentialPath = "genaitestandee-5e0178ed90db.json"; // letakkan file JSON ini di root project
     var spreadsheetId = "13VhYocw5otSEtHV5fpvcfHNYoRnqvEd14zqcDishhY0";
     return new GoogleSheetsLogger(credentialPath, spreadsheetId);
 });
